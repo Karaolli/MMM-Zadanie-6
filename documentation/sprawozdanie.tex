@@ -12,6 +12,20 @@
 \hyphenpenalty=10000
 \exhyphenpenalty=10000
 \usepackage{indentfirst}
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true,
+    frame=single,
+}
+\usepackage{hyperref}
 
 
 \title{MMM, Sprawozdanie projekt 6}
@@ -27,11 +41,99 @@
 
 \section{Część analityczna}
 
+\newpage
 \section{Kod}
 
+Plik \texttt{simulation.py} zawiera kluczowe funkcje do symulowania układu.
+
+\subsection{Model stanowy}
+Funkcja \texttt{make\_state\_model()} tworzy macierze modelu stanowego (A, B, C, D) na podstawie parametrów układu (R, L, k itd.).
+
+\begin{lstlisting}
+def make_state_model(R, L, K_T, K_e, J, k):
+    A = np.array([[ -R/L, -K_e/L,    0],
+                  [K_T/J,      0, -k/J],
+                  [    0,      1,    0]])
+    B = np.array([[1/L],
+                  [  0],
+                  [  0]])
+    C = np.array([[1, 0, 0],
+                  [0, 1, 0],
+                  [0, 0, 1]])
+    D = np.array([[0],
+                  [0],
+                  [0]])
+    return A, B, C, D
+\end{lstlisting}
+
+Macierz A jest macierzą stanu, i opisuje zachowanie swobodne, czyli zależące tylko od stanu układu.
+
+Macierz B opisuje to, jak wejście wpływa na stan układu.
+
+*Szczególne postaci macierzy A i B pochodzą z części analitycznej.
+
+Macierz C jest macierzą obserwacji, czyli wybiera wartości których stanów przechodzą na wyjście.
+W naszym przypadku jest to macierz jednostkowa, co powoduje że możemy obserwować wszystkie stany układu niezależnie, z wektora \textbf{y}.
+
+Macierz D jest macierzą sprzężenia bezpośredniego i w rzeczywistych układach równa 0, ponieważ inaczej byłaby natychmiast odpowiedź na wejście, co jest fizycznie niemożliwe.
+
+\newpage
+\subsection{Symulacja i całkowanie}
+Symulacja układu polega na obliczeniu pochodnych stanów z macierzy A i stanów, oraz macierzy B i wejścia.
+Następnie, na podstawie obliczonych pochodnych należy aktualizować stany, całkując pochodne w czasie.
+Jedną z metod całkowania, która jest bardziej dokładna niż metoda prostokątów, i przy tym nie jest zbyt skomplikowna w implementacji, jest metoda Rungego-Kutty 4 stopnia.
+Jej realizacja odbywa się przez funkcję \texttt{rk4\_step()}.
+\begin{lstlisting}
+def rk4_step(x, u, dt, A, B, C, D):
+    y = C @ x + D * u
+    def dxdt(x, u):
+        return A @ x + B * u
+    k1 = dxdt(x          , u)
+    k2 = dxdt(x + k1*dt/2, u)
+    k3 = dxdt(x + k2*dt/2, u)
+    k4 = dxdt(x + k3*dt  , u)
+    x += dt * (k1 + 2*k2 + 2*k3 + k4) / 6
+    return x, y
+\end{lstlisting}
+Z tą metodą, całkowanie z krokiem $dt$ polega na obliczeniu kolejnych wektorów pochodnych: k1 w czasie $t_0$, k2 i k3 w czasie $t_0$ + $dt \over 2$, oraz k4 w czasie $t_0$ + $dt$.
+Zakładamy, że wejście $u$ pozostaje stałe w czasie jednego kroku.
+
+Na końcu, wektor stanu zmienia się o średnią ważoną tych wektorów pochodnych.
+
+Wyjście \textbf{y} układu jest obliczane na początku funkcji, ponieważ ma ono odbywać się ze stanem przed aktualizacją.
+
+Wzory \texttt{dxdt = A @ x + B * u} oraz \texttt{y = C @ x + D * u} (gdzie \texttt{@} oznacza mnożenie macierzowe) oczywiście pochodzą z postaci równań modelu stanowego.
+Wejście $u$ jest skalarem, dlatego można użyć mnożenie skalarne zamiast macierzowego.
+
+Funkcja zwraca zmodyfikowany wektor stanu \textbf{x} oraz wektor wyjścia \textbf{y}.
+
+
+\subsection{Sygnały}
+Ponieważ sygnały możemy generować z dowolną rozdzielczością czasową, są one sprzężone z krokiem symulacji, żeby nie mieć trudności z interpolacją.
+
+
 \section{Wnioski}
+Udało się stworzyć model matematyczny (stanowy) danego układu, oraz zasymulować go odpowiedzi na różne sygnały wejściowe, z wykreśleniem przebiegów każdego ze stanów. Program umożliwia również zmianę parametrów układu, kroku symulacji, oraz warunków początkowych.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{MMM1.jpeg}
+  \caption{ Okno główne programu }
+\end{figure}
+
+Algorytm całkowania Rungego-Kutty powinien być dość precyzyjny, jednak dla dużych kroków symulacji można zauważyć zniekształcenia.
+
+
+
+
+
 
 \section{Źródła}
+\url{https://www.pythonguis.com/pyside6/}
+
+\url{https://matplotlib.org}
+
+\url{https://pl.wikipedia.org/wiki/Algorytm_Rungego-Kutty}
 
 
 \end{document}

@@ -11,14 +11,14 @@ class Slider(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.label = QLabel(name)
-        self.label.setFixedWidth(70)
+        self.label.setFixedWidth(71)
         layout.addWidget(self.label)
 
         self.spinbox = QDoubleSpinBox()
         self.spinbox.setRange(desc["min"], desc["max"])
         self.spinbox.setValue(desc["default"])
         self.spinbox.setSingleStep(desc["step"])
-        self.spinbox.setFixedWidth(60)
+        self.spinbox.setFixedWidth(55)
         self.spinbox.valueChanged.connect(self._on_spinbox)
         layout.addWidget(self.spinbox)
 

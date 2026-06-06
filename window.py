@@ -2,11 +2,13 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QPushButton
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 import simulation
 import signals
 from slider import Slider
 
-colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+plot_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+plot_labels = ["Prąd [A]", "Prędkość kątowa [Rad/s]", "Położenie kątowe [Rad]", "Wejście U [V]"]
 
 class MainWindow(QMainWindow):
     parameter_descriptions_signal = {
@@ -19,10 +21,10 @@ class MainWindow(QMainWindow):
     parameter_descriptions_system = {
         "R [Ω]"         : {"min":0   , "max":100, "default":1  , "step":0.01},
         "L [H]"         : {"min":0.01, "max":100, "default":1  , "step":0.01},
-        "K_T"           : {"min":0   , "max":100, "default":1  , "step":0.01},
-        "K_e"           : {"min":0   , "max":100, "default":1  , "step":0.01},
-        "J"             : {"min":0.01, "max":100, "default":1  , "step":0.01},
-        "k"             : {"min":0   , "max":100, "default":1  , "step":0.01}}
+        "K<sub>T</sub> [N*m/A]": {"min":0   , "max":100, "default":1  , "step":0.01},
+        "Kₑ [V/(Rad/s)]": {"min":0   , "max":100, "default":1  , "step":0.01},
+        "J [kg*m²]"     : {"min":0.01, "max":100, "default":1  , "step":0.01},
+        "k [N*m/Rad]"   : {"min":0   , "max":100, "default":1  , "step":0.01}}
 
     parameter_descriptions_x0 = {
         "i(0)"          : {"min":-10 , "max":10 , "default":0  , "step":0.01},
@@ -132,17 +134,18 @@ class MainWindow(QMainWindow):
             self.signal = signals.square  (self.params["Częstotl. [Hz]"], self.params["Faza [°]"], self.params["Długość [s]"], self.params["Długość [%]"] * 0.01, self.params["Krok [ms]"] * 0.001)
         if self.signal_type == "sawtooth":
             self.signal = signals.sawtooth(self.params["Częstotl. [Hz]"], self.params["Faza [°]"], self.params["Długość [s]"], self.params["Długość [%]"] * 0.01, self.params["Krok [ms]"] * 0.001)
-        A, B, C, D = simulation.make_state_model(self.params["R [Ω]"], self.params["L [H]"], self.params["K_T"], self.params["K_e"], self.params["J"], self.params["k"])
+        A, B, C, D = simulation.make_state_model(self.params["R [Ω]"], self.params["L [H]"], self.params["K<sub>T</sub> [N*m/A]"], self.params["Kₑ [V/(Rad/s)]"], self.params["J [kg*m²]"], self.params["k [N*m/Rad]"])
         self.y = simulation.simulate([[self.params["i(0)"]], [self.params["θ'(0)"]], [self.params["θ(0)"]]], self.signal[1], self.params["Krok [ms]"] * 0.001, A, B, C, D)
         self._plot()
 
     def _plot(self):
         self.plot_axes.clear()
-        for i, enabled in enumerate(self.chosen_plots):
-            if enabled:
-                self.plot_axes.plot(self.signal[0], self.y[:, i], color=colors[i])
-        self.plot_axes.plot(self.signal[0], self.signal[1], color=colors[4])
-        self.plot_axes.set_xlabel("Time (s)")
+        self.plot_axes.plot(self.signal[0], self.signal[1], label=plot_labels[3], color=plot_colors[4])
+        for idx, chosen in enumerate(self.chosen_plots):
+            if chosen:
+                self.plot_axes.plot(self.signal[0], self.y[:, idx], label=plot_labels[idx], color=plot_colors[idx])
+        self.plot_axes.set_xlabel("Czas [s]")
+        self.plot_axes.legend()
         self.plot_canvas.draw()
 
     def _toggle_plot(self, index : int):
